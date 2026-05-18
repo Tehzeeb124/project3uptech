@@ -1,11 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Search, Plus, X, Trash2, User, Briefcase, 
   DollarSign, Users, ChevronRight, ChevronLeft, ShieldCheck 
 } from "lucide-react";
 
-// Types Define kar lete hain TypeScript errors se bachne ke liye
 interface EmployeeType {
   _id: string;
   name: string;
@@ -29,43 +28,42 @@ export default function EmployeeDashboard() {
   const [formData, setFormData] = useState({ name: "", email: "", department: "IT", salary: "" });
   const [loading, setLoading] = useState(false);
 
-  // Trigger content sync whenever parameters morph
-  useEffect(() => { 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Query filter context build kar rahe hain
-        const searchQuery = search ? `&search=${encodeURIComponent(search)}` : "";
-        const res = await fetch(`/api/employees?page=${page}&limit=5${searchQuery}`);
-        
-        if (!res.ok) {
-          console.error("Fetch failed with status:", res.status);
-          return;
-        }
-        
-        const data = await res.json();
-
-        if (data && data.employees) {
-          // Client side par department filtering smoothly synchronize hogi
-          if (deptFilter !== "All") {
-            const filtered = data.employees.filter((emp: EmployeeType) => emp.department === deptFilter);
-            setEmployees(filtered);
-          } else {
-            setEmployees(data.employees);
-          }
-          setTotalPages(data.totalPages || 1);
-        } else {
-          setEmployees([]);
-        }
-      } catch (error) {
-        console.error("Fetch error:", error);
-      } finally {
-        setLoading(false);
+  // 1. FetchData wrapped inside useCallback to maintain perfect hook lifecycle
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const searchQuery = search ? `&search=${encodeURIComponent(search)}` : "";
+      const res = await fetch(`/api/employees?page=${page}&limit=5${searchQuery}`);
+      
+      if (!res.ok) {
+        console.error("Fetch failed with status:", res.status);
+        return;
       }
-    };
+      
+      const data = await res.json();
 
+      if (data && data.employees) {
+        if (deptFilter !== "All") {
+          const filtered = data.employees.filter((emp: EmployeeType) => emp.department === deptFilter);
+          setEmployees(filtered);
+        } else {
+          setEmployees(data.employees);
+        }
+        setTotalPages(data.totalPages || 1);
+      } else {
+        setEmployees([]);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, deptFilter]);
+
+  // Trigger data load smoothly
+  useEffect(() => { 
     fetchData(); 
-  }, [page, search, deptFilter]); // Dependents cleanly tracks cascading state metrics
+  }, [fetchData]);
 
   // Handle Submit (Create)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,24 +80,24 @@ export default function EmployeeDashboard() {
       setIsModalOpen(false);
       setFormData({ name: "", email: "", department: "IT", salary: "" });
       setPage(1);
-      // Data state auto sync dynamic parameters trigger se handle ho jayegi
       setSearch("");
       setDeptFilter("All");
+      fetchData(); // Page reload kiye bina automatic list refresh ho jayegi
     } else {
       const errData = await res.json();
       alert(errData.error || "Kuch masla hua");
     }
   };
 
-  // Handle Delete
+  // Handle Delete (Fixed Server Worker Window Crash)
   const handleDelete = async (id: string) => {
     if (!isAdmin) return alert("Sirf Admin hi data delete kar sakta hai!");
     if (confirm("Are you sure you want to delete this personnel record?")) {
       const res = await fetch(`/api/employees?id=${id}`, { method: "DELETE" });
       if (res.ok) {
-        // Trigger render sync state update forcing side-effect execution
-        setPage(p => p); 
-        window.location.reload(); // Quick refresh baseline structure ko check karne ke liye
+        // ✅ FIXED: window.location.reload() ko remove kar diya hai aur direct state/fetch handle kiya hai
+        setPage(1);
+        fetchData(); 
       }
     }
   };
@@ -348,7 +346,7 @@ export default function EmployeeDashboard() {
                     onChange={(e) => setFormData({...formData, salary: e.target.value})}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white"
                     placeholder="75000"
-                />
+                  />
                 </div>
               </div>
 
