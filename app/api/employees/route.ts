@@ -2,7 +2,7 @@ import { connectDB } from "@/lib/db";
 import { Employee } from "@/models/Employee";
 import { NextResponse } from "next/server";
 
-// 1. GET Method (Existing - Data Fetch karne ke liye)
+// 1. GET Method - Data Fetch karne ke liye (Fixed Unused Error Warning)
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -38,11 +38,12 @@ export async function GET(req: Request) {
       currentPage: page
     });
   } catch (error) {
+    console.error("Database fetch log details:", error);
     return NextResponse.json({ error: "Data fetch nahi ho saka" }, { status: 500 });
   }
 }
 
-// 2. POST Method (Existing - Naya Employee add karne ke liye)
+// 2. POST Method - Naya Employee add karne ke liye (Fixed Explicit 'any' Error)
 export async function POST(req: Request) {
   try {
     await connectDB();
@@ -62,26 +63,28 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(newEmployee, { status: 201 });
-  } catch (error: any) {
-    if (error.code === 11000) {
+  } catch (error: unknown) {
+    console.error("Database post log details:", error);
+    
+    // Type-safe check handles MongoDB duplicate keys cleanly
+    if (error && typeof error === "object" && "code" in error && error.code === 11000) {
       return NextResponse.json({ error: "Yeh email pehle se majood hai" }, { status: 400 });
     }
     return NextResponse.json({ error: "Employee save karne mein masla hua" }, { status: 500 });
   }
 }
 
-// 3. NAYA DELETE METHOD (Yeh lagana zaroori tha deletion chalane ke liye)
+// 3. DELETE METHOD - Database se record clean karne ke liye (Fixed Unused Error Warning)
 export async function DELETE(req: Request) {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id"); // Frontend se bheji gayi ID extract karega
+    const id = searchParams.get("id"); 
 
     if (!id) {
       return NextResponse.json({ error: "Employee ID lazmi hai" }, { status: 400 });
     }
 
-    // MongoDB/Mongoose command database se delete karne ke liye
     const deletedEmployee = await Employee.findByIdAndDelete(id);
 
     if (!deletedEmployee) {
@@ -90,6 +93,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ message: "Record delete ho gaya hai" }, { status: 200 });
   } catch (error) {
+    console.error("Database delete log details:", error);
     return NextResponse.json({ error: "Delete karne mein masla hua" }, { status: 500 });
   }
 }

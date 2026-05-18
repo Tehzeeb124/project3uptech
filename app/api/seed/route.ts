@@ -28,6 +28,8 @@ export async function GET() {
 
     return NextResponse.json({ message: "Database Seeded Successfully! 12 employees added." });
   } catch (error) {
+    // Console log lagane se 'unused variable' ka error khatam ho jata hai aur debug karna asaan hota hai
+    console.error("Seeding error logging:", error);
     return NextResponse.json({ error: "Seeding failed" }, { status: 500 });
   }
 }
