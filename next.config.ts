@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    optimizeCss: true, // This enables Tailwind v4 extraction engine properly
+  },
 };
 
 export default nextConfig;
