@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
     // Build ke dauran agar koi minor strict type mismatch ho to build na ruke
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Production compile time par linter warnings ko bypass karne ke liye
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
